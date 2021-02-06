@@ -19,7 +19,6 @@ file_dir = args.input
 outpre = args.output
 refpath = args.reference
 
-file_dir = "/Users/robin/Documents/projects/scLineagerParser/mycnsclin/"
 filelist = os.scandir(file_dir)
 filenamelist = []
 for file in filelist:
