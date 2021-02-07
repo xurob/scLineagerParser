@@ -1,24 +1,44 @@
 import pandas as pd
 import os
 import argparse
-
+import subprocess
 	
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-i","--input", help="input directory: please add /")
 parser.add_argument("-o", "--output", help="output path/to/outputdir/")
 parser.add_argument("-ref", "--reference", help="Path/to/reffile")
+parser.add_argument("-anno", "--annovar", help="Path/to/annovar/")
 
 
 args = parser.parse_args()
 
 
 
-
 file_dir = args.input
 outpre = args.output
 refpath = args.reference
+annovar_path = args.annovar
 
+temppath = str(outpre) + "temp/"
+temppath_annovar_input = str(temppath) + "annovat_input/"
+temppath_annovar_output = str(temppath) + "annovat_output/"
+mutations_dir = outpre + "mutations/"
+
+#create directories
+if not os.path.exists(temppath):
+		   os.makedirs(temppath)
+if not os.path.exists(temppath_annovar_input):
+		   os.makedirs(temppath_annovar_input)
+if not os.path.exists(temppath_annovar_output):
+		   os.makedirs(temppath_annovar_output)
+if not os.path.exists(mutations_dir):
+	   os.makedirs(mutations_dir)
+
+
+# =============================================================================
+# convert mgatk raw output into annovar input files
+# =============================================================================
 filelist = os.scandir(file_dir)
 filenamelist = []
 for file in filelist:
@@ -26,7 +46,16 @@ for file in filelist:
 		filenamelist.append(file.name.split(".A.txt")[0])
 
 
-for filename in filenamelist:	
+for filename in filenamelist:
+	#make final dir for every cell; coverage already goes in; rest into temp
+	
+	cell_dir = mutations_dir + filename + "/"
+	if not os.path.exists(cell_dir):
+		   os.makedirs(cell_dir)
+	
+	
+	
+	#Parser thanks Paulinus
 	Apath = file_dir + filename + ".A.txt"
 	Cpath = file_dir + filename + ".C.txt"
 	Gpath = file_dir + filename + ".G.txt"
@@ -40,7 +69,7 @@ for filename in filenamelist:
 
 	ATCG = {'A': A, 'T': T, 'C': C, 'G': G}
 
-	with open(outpre + filename + ".mutations.txt", "w") as V:
+	with open(temppath_annovar_input + filename + ".mutations.txt", "w") as V:
 	    V.write(
 	        "Chr" + "\t" + "Start" + "\t" + "End" + "\t" + "Ref" + "\t" + "Alt" + "\t" + "Normal_ref" + "\t" + "Normal_alt" + "\t" + "Tumor_ref" + "\t" + "Tumor_alt" + "\n")
 	    for index, row in REF.iterrows():
@@ -73,7 +102,7 @@ for filename in filenamelist:
 	    V.close()
 	
 
-	with open(outpre + filename + ".coverage.txt", 'w') as V1:
+	with open(cell_dir +  "coverage.txt", 'w') as V1:
 		name = row[1]
 		cov = pd.read_table(covPath,sep= ",", header = None)
 		V1.write("Chr" + "\t" +"Pos" + "\t" +"Base" + "\t" + "Count" + "\n")
@@ -86,7 +115,32 @@ for filename in filenamelist:
 	
 
 
-'''	
+# =============================================================================
+# run annovar
+# =============================================================================
+
+with os.scandir(temppath_annovar_input)  as dir:
+	for file in dir:
+		if file.name.endswith(".mutations.txt"):
+			
+			subprocess.check_call("perl " + annovar_path+"table_annovar.pl " +file.path + " humandb/ -buildver hg19 -out "+ temppath_annovar_output + file.name.split(".txt")[0]+".annovar.txt -protocol refGene,ljb26_all,cosmic70,esp6500siv2_all,exac03,1000g2015aug_all -operation g,f,f,f,f,f -nastring .", shell=True)
+
+'''
+# =============================================================================
+# convert annovar_output into sclineager_input
+# =============================================================================
+
+
+with os.scandir(temppath_annovar_out) as dir:
+	for file in dir:
+		annovar_out_file = file.path
+		temp_file = temppath_annovar_input + file.name.split(".annovar.txt")[0]+".txt"
+		
+		
+		annovar_table = pd.read_table(annovar_out_file, sep= "\t")
+		temp_table = pd.read_table(temp_file, sep= "\t")
+		
+		
 path = "/Users/robin/Desktop/SCLINEAGER/mutations/301/P301_2/tre123.txt"
 
 file3 = pd.read_table(path, sep= "\t", header = None)
@@ -113,82 +167,7 @@ columns = ['Chr','Start','End','Ref','Alt','Normal_ref', 'Normal_alt','Tumor_ref
 
 file2 = file3[columns]																																
 
-'''
 
 
 
-	
-	
-'''
-with open("/Users/robin/Desktop/mycnsclin/Z.txt","w") as V:
-			V.write("Chr"+"\t" + "Start" +"\t" +"End" +"\t" + "Ref" +"\t" + "Alt" +"\t" + "Normal_ref" +"\t" +"Normal_alt" +"\t" +"Tumor_ref" +"\t" + "Tumor_alt"+"\n")
-			for index, row in REF.iterrows():
-				start = int(row[0])
-				end = int(row[0])
-				ref_pos = int(row[0])
-				ref_base = row[1]
-				if(ref_base == "A" and ref_pos in A['pos'].values):
-					normal_ref = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-					tumor_ref = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-					if ref_pos in T['pos'].values:
-						normal_alt = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						tumor_alt = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "T" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-					if ref_pos in C['pos'].values:
-						normal_alt = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-						tumor_alt = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "C" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-					if ref_pos in G['pos'].values:
-						normal_alt = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-						tumor_alt = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "G" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-			
-				if(ref_base == "T" and ref_pos in T['pos'].values):
-						normal_ref = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						tumor_ref = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						if ref_pos in A['pos'].values:
-							normal_alt = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-							tumor_alt = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-							V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "A" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-						if ref_pos in C['pos'].values:
-							normal_alt = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-							tumor_alt = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-							V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "C" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-						if ref_pos in G['pos'].values:
-							normal_alt = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-							tumor_alt = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-							V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "G" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-				if(ref_base == "C" and ref_pos in C['pos'].values):
-					normal_ref = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-					tumor_ref = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-					if ref_pos in T['pos'].values:
-						normal_alt = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						tumor_alt = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "T" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-					if ref_pos in A['pos'].values:
-						normal_alt = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-						tumor_alt = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "A" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-					if ref_pos in G['pos'].values:
-						normal_alt = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-						tumor_alt = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "G" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-			
-				if(ref_base == "G" and ref_pos in G['pos'].values):
-					normal_ref = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-					tumor_ref = int(G[G['pos']==ref_pos]['fw']) + int(G[G['pos']==ref_pos]['rv'])
-					if ref_pos in T['pos'].values:
-						normal_alt = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						tumor_alt = int(T[T['pos']==ref_pos]['fw']) + int(T[T['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "T" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-					if ref_pos in C['pos'].values:
-						normal_alt = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-						tumor_alt = int(C[C['pos']==ref_pos]['fw']) + int(C[C['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "C" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-					if ref_pos in A['pos'].values:
-						normal_alt = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-						tumor_alt = int(A[A['pos']==ref_pos]['fw']) + int(A[A['pos']==ref_pos]['rv'])
-						V.write("2" + "\t" + str(start) + "\t" + str(end) + "\t" + str(ref_base) + "\t" + "A" + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n" )
-
-			V.close()
-'''
+	'''
