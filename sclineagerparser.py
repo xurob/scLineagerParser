@@ -10,6 +10,7 @@ parser.add_argument("-o", "--output", help="output path/to/outputdir/")
 parser.add_argument("-ref", "--reference", help="Path/to/reffile")
 parser.add_argument("-anno", "--annovar", help="Path/to/annovar/")
 parser.add_argument("-cor", "--correction", help="correction for different offset (int)")
+parser.add_argument("-fi", "--filter", help="filter")
 
 args = parser.parse_args()
 
@@ -19,8 +20,11 @@ file_dir = args.input
 outpre = args.output
 refpath = args.reference
 annovar_path = args.annovar
-correction = int(args.correction)
+correction = args.correction
+path_mutation_filter = args.filter
 
+
+correction = int(correction)
 temppath = str(outpre) + "temp/"
 temppath_annovar_input = str(temppath) + "annovat_input/"
 temppath_annovar_output = str(temppath) + "annovat_output/"
@@ -56,13 +60,18 @@ for filename in filenamelist:
 	
 	
 	
-	#Parser thanks Paulinus
+	#Parser; thanks Paulinus
 	Apath = file_dir + filename + ".A.txt"
 	Cpath = file_dir + filename + ".C.txt"
 	Gpath = file_dir + filename + ".G.txt"
 	Tpath = file_dir + filename + ".T.txt"
 	covPath = file_dir + filename + ".coverage.txt"
 	REF = pd.read_table(refpath, sep= "\t", header = None)
+	filtermutations = []
+	with open(path_mutation_filter,'r') as file:
+		for line in file:
+			filtermutations.append(line.split("\n")[0])
+	
 	A = pd.read_table(Apath, sep= ",", header = None, names=["pos", "name", "fw", "rv"])
 	T = pd.read_table(Tpath, sep= ",", header = None, names=["pos", "name", "fw", "rv"])
 	C = pd.read_table(Cpath, sep= ",", header = None, names=["pos", "name", "fw", "rv"])
@@ -71,34 +80,34 @@ for filename in filenamelist:
 	ATCG = {'A': A, 'T': T, 'C': C, 'G': G}
 
 	with open(temppath_annovar_input + filename + ".mutations.txt", "w") as V:
-	    V.write(
+		V.write(
 	        "Chr" + "\t" + "Start" + "\t" + "End" + "\t" + "Ref" + "\t" + "Alt" + "\t" + "Normal_ref" + "\t" + "Normal_alt" + "\t" + "Tumor_ref" + "\t" + "Tumor_alt" + "\n")
-	    for index, row in REF.iterrows():
-	        start = int(row[0])
-	        end = int(row[0])
-	        ref_pos = int(row[0])
-	        ref_base = row[1]
-	        for Bkey in ATCG:
-	            if ref_base == Bkey:
-	                B = ATCG[Bkey]
-	                if ref_pos in B['pos'].values:
-	                    Blist = B[B['pos'] == ref_pos]
-	                    normal_ref = int(Blist['fw']) + int(Blist['rv'])
-	                    '''Warum lässt du den zwei mal die selben Werte auslesen? Der muss ja jedes mal das gesamte Objekt durchsuchen, dauert ewig'''
-	                    # tumor_ref = int(B[B['pos'] == ref_pos]['fw']) + int(B[B['pos'] == ref_pos]['rv'])
-	                    tumor_ref = normal_ref
+		for index, row in REF.iterrows():
+			start = int(row[0])
+			end = int(row[0])
+			ref_pos = int(row[0])
+			ref_base = row[1]
+			for Bkey in ATCG:
+				if ref_base == Bkey:
+					B = ATCG[Bkey]
+					if ref_pos in B['pos'].values:
+						Blist = B[B['pos'] == ref_pos]
+						normal_ref = int(Blist['fw']) + int(Blist['rv'])
+						'''Warum lässt du den zwei mal die selben Werte auslesen? Der muss ja jedes mal das gesamte Objekt durchsuchen, dauert ewig'''
+						# tumor_ref = int(B[B['pos'] == ref_pos]['fw']) + int(B[B['pos'] == ref_pos]['rv'])
+						tumor_ref = normal_ref
 	
-	                    for Bkey2 in ATCG:
-	                        if not Bkey2 == Bkey:
-	                            B2 = ATCG[Bkey2]
-	                            if ref_pos in B2['pos'].values:
-	                                B2list = B2[B2['pos'] == ref_pos]
-	                                normal_alt = int(B2list['fw']) + int(B2list['rv'])
-	                                '''same here'''
-	                                # tumor_alt = int(B2[B2['pos'] == ref_pos]['fw']) + int(B2[B2['pos'] == ref_pos]['rv'])
-	                                tumor_alt = normal_alt
-	                                V.write("2" + "\t" + str(start+correction) + "\t" + str(end+correction) + "\t" + str(ref_base) + "\t" + Bkey2 + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n")
-	    V.close()
+						for Bkey2 in ATCG:
+							if not Bkey2 == Bkey:
+								B2 = ATCG[Bkey2]
+								if ref_pos in B2['pos'].values:
+									B2list = B2[B2['pos'] == ref_pos]
+									normal_alt = int(B2list['fw']) + int(B2list['rv'])
+									# tumor_alt = int(B2[B2['pos'] == ref_pos]['fw']) + int(B2[B2['pos'] == ref_pos]['rv'])
+									tumor_alt = normal_alt
+									if str(str(start)+str(ref_base)+">"+str(Bkey2)) in filtermutations:
+										V.write("2" + "\t" + str(start+correction) + "\t" + str(end+correction) + "\t" + str(ref_base) + "\t" + Bkey2 + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n")
+		V.close()
 	
 
 	with open(cell_dir +  "coverage.txt", 'w') as V1:
