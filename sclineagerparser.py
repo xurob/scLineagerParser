@@ -19,7 +19,7 @@ file_dir = args.input
 outpre = args.output
 refpath = args.reference
 annovar_path = args.annovar
-correction = args.correction
+correction = int(args.correction)
 
 temppath = str(outpre) + "temp/"
 temppath_annovar_input = str(temppath) + "annovat_input/"
@@ -97,9 +97,7 @@ for filename in filenamelist:
 	                                '''same here'''
 	                                # tumor_alt = int(B2[B2['pos'] == ref_pos]['fw']) + int(B2[B2['pos'] == ref_pos]['rv'])
 	                                tumor_alt = normal_alt
-	                                V.write("2" + "\t" + str(start+correction) + "\t" + str(end+correction) + "\t" + str(
-	                                    ref_base) + "\t" + Bkey2 + "\t" + str(normal_ref) + "\t" + str(
-	                                    normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n")
+	                                V.write("2" + "\t" + str(start+correction) + "\t" + str(end+correction) + "\t" + str(ref_base) + "\t" + Bkey2 + "\t" + str(normal_ref) + "\t" + str(normal_alt) + "\t" + str(tumor_ref) + "\t" + str(tumor_alt) + "\n")
 	    V.close()
 	
 
