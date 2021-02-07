@@ -123,51 +123,43 @@ with os.scandir(temppath_annovar_input)  as dir:
 	for file in dir:
 		if file.name.endswith(".mutations.txt"):
 			
-			subprocess.check_call("perl " + annovar_path+"table_annovar.pl " +file.path + " humandb/ -buildver hg19 -out "+ temppath_annovar_output + file.name.split(".txt")[0]+".annovar.txt -protocol refGene,ljb26_all,cosmic70,esp6500siv2_all,exac03,1000g2015aug_all -operation g,f,f,f,f,f -nastring .", shell=True)
+			subprocess.check_call("perl " +"table_annovar.pl " +file.path + " humandb/ -buildver hg19 -out "+ temppath_annovar_output + file.name.split(".txt")[0]+" -protocol refGene,ljb26_all,cosmic70,esp6500siv2_all,exac03,1000g2015aug_all -operation g,f,f,f,f,f -nastring . --nopolish", shell=True)
 
-'''
+
 # =============================================================================
 # convert annovar_output into sclineager_input
 # =============================================================================
 
-
-with os.scandir(temppath_annovar_out) as dir:
+filelist_anno_out = []
+with os.scandir(temppath_annovar_output) as dir:
 	for file in dir:
-		annovar_out_file = file.path
-		temp_file = temppath_annovar_input + file.name.split(".annovar.txt")[0]+".txt"
+		if file.endswith(".hg19_multianno.txt"):
+			filelist_anno_out.append(file.name.split(".hg19_multianno.txt")[0])
+			
+			
+	for filename in filelist_anno_out:
+		annovar_out_file = temppath_annovar_output + filename + ".hg19_multianno.txt"
+		temp_file = temppath_annovar_input + filename + ".txt"
 		
 		
 		annovar_table = pd.read_table(annovar_out_file, sep= "\t")
 		temp_table = pd.read_table(temp_file, sep= "\t")
+		with open(mutations_dir + filename + "/" + filename + "_mutations_hg19.txt", 'w') as V3:
+			V3.write("Chr" + "\t" + "Start" + "\t" + "End" + "\t"+ "Ref" +
+					 "\t" + "Normal_ref" + "\t" + "Normal_alt" + "\t"+ "Tumor_ref" +
+					 "\t"+ "Tumor_alt" + "\t" + "Func.refGene" + "\t"+ "Gene.refGene" 
+					 + "\t" + "ExonicFunc.refGene" + "\t"+ "AAChange.refGene"
+					 + "\t" + "SIFT_pred" + "\t"+ "Polyphen2_HVAR_pred"
+					 + "\t" + "cosmic70" + "\t"+ "esp6500siv2_all"
+					 + "\t" + "ExAC_ALL" + "\t"+ "1000g2015aug_all"
+					 + "\n")
+			for index, row in annovar_table.iterrows():
+				if index >=1:
+					V3.write("2" + "\t" + row['Start']+ "\t" + row['End']+ "\t" + row['Ref']+ "\t" + row['Alt']
+					  + "\t" + temp_table.iat[index,'Normal_ref'] + "\t" + temp_table.iat[index,'Normal_alt'] + "\t" 
+					  + temp_table.iat[index,'Normal_ref'] + "\t" + temp_table.iat[index,'Normal_alt'] + "\t" +
+					  row['Func.refGene'] + "\t" + row['Gene.refGene'] + "\t" + row['ExonicFunc.refGene'] + "\t" +
+					  row['AAChange.refGene'] + "\t" + row['SIFT_pred'] + "\t" + row['Polyphen2_HVAR_pred'] + "\t" + row['cosmic70']
+					  + "\t" + row['esp6500siv2_all'] + "\t" + row['ExAC_ALL'] + "\t" + row['1000g2015aug_all'] + "\n" 
+					   )
 		
-		
-path = "/Users/robin/Desktop/SCLINEAGER/mutations/301/P301_2/tre123.txt"
-
-file3 = pd.read_table(path, sep= "\t", header = None)
-	
-
-path = "/Users/robin/Desktop/annovar/myanno.hg19_multianno.txt"
-
-file3 = pd.read_table(path, sep= "\t")
-
-Chr	Start	End	Ref	Alt	Caller	Normal_ref	Normal_alt	Tumor_ref	Tumor_alt	Func.refGene	Gene.refGene	ExonicFunc.refGene	AAChange.refGene	SIFT_pred	Polyphen2_HVAR_pred	cosmic70	esp6500siv2_all	ExAC_ALL	X1000g2015aug_all
-
-df1 = df[['Chr', 'Start', 'End', 'Ref', 'Alt', 'Func.refGene', 'Gene.refGene', 'ExonicFunc.refGene', 'AAChange.refGene', 'SIFT_pred', 'Polyphen2_HVAR_pred', 'cosmic70', 'esp6500siv2_all', 'ExAC_ALL', 'X1000g2015aug_all']
-
-		 
-with open("/Users/robin/Desktop/mycnsclin/Z.txt","w") as V:
-			V.write("Chr"+"\t" + "Start" +"\t" +"End" +"\t" + "Ref" +"\t" + "Alt" +"\t" + "Normal_ref" +"\t" +"Normal_alt" +"\t" +"Tumor_ref" +"\t" + "Tumor_alt"+"\n")
-			file3.drop(['SIFT_score', 'Polyphen2_HDIV_score'], axis=1)
-				
-	
-
-
-
-columns = ['Chr','Start','End','Ref','Alt','Normal_ref', 'Normal_alt','Tumor_ref','Tumora_alt','Func.refGene','Gene.refGene','ExonicFunc.refGene','AAChange.refGene','SIFT_pred','Polyphen2_HVAR_pred','cosmic70','esp6500siv2_all','ExAC_ALL']
-
-file2 = file3[columns]																																
-
-
-
-
-	'''
