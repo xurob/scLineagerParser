@@ -130,10 +130,13 @@ with os.scandir(temppath_annovar_input)  as dir:
 # convert annovar_output into sclineager_input
 # =============================================================================
 
+temppath_annovar_output = "/Users/robin/Documents/projects/scLineagerParser/out/temp/annovat_output/"
+temppath_annovar_input = "/Users/robin/Documents/projects/scLineagerParser/out/temp/annovat_input/"
+mutations_dir = "/Users/robin/Documents/projects/scLineagerParser/out/mutations/"
 filelist_anno_out = []
 with os.scandir(temppath_annovar_output) as dir:
 	for file in dir:
-		if file.endswith(".hg19_multianno.txt"):
+		if file.name.endswith(".hg19_multianno.txt"):
 			filelist_anno_out.append(file.name.split(".hg19_multianno.txt")[0])
 			
 			
@@ -142,9 +145,9 @@ with os.scandir(temppath_annovar_output) as dir:
 		temp_file = temppath_annovar_input + filename + ".txt"
 		
 		
-		annovar_table = pd.read_table(annovar_out_file, sep= "\t")
-		temp_table = pd.read_table(temp_file, sep= "\t")
-		with open(mutations_dir + filename + "/" + filename + "_mutations_hg19.txt", 'w') as V3:
+		annovar_table = pd.read_table(annovar_out_file, header = [0,1], sep= "\t")
+		temp_table = pd.read_table(temp_file,header = [0], sep= "\t")
+		with open(mutations_dir + filename.split(".mutations")[0] + "/" + filename.split(".mutations")[0] + "_mutations_hg19.txt", 'w') as V3:
 			V3.write("Chr" + "\t" + "Start" + "\t" + "End" + "\t"+ "Ref" +
 					 "\t" + "Normal_ref" + "\t" + "Normal_alt" + "\t"+ "Tumor_ref" +
 					 "\t"+ "Tumor_alt" + "\t" + "Func.refGene" + "\t"+ "Gene.refGene" 
@@ -154,12 +157,12 @@ with os.scandir(temppath_annovar_output) as dir:
 					 + "\t" + "ExAC_ALL" + "\t"+ "1000g2015aug_all"
 					 + "\n")
 			for index, row in annovar_table.iterrows():
-				if index >=1:
-					V3.write("2" + "\t" + row['Start']+ "\t" + row['End']+ "\t" + row['Ref']+ "\t" + row['Alt']
-					  + "\t" + temp_table.iat[index,'Normal_ref'] + "\t" + temp_table.iat[index,'Normal_alt'] + "\t" 
-					  + temp_table.iat[index,'Normal_ref'] + "\t" + temp_table.iat[index,'Normal_alt'] + "\t" +
-					  row['Func.refGene'] + "\t" + row['Gene.refGene'] + "\t" + row['ExonicFunc.refGene'] + "\t" +
-					  row['AAChange.refGene'] + "\t" + row['SIFT_pred'] + "\t" + row['Polyphen2_HVAR_pred'] + "\t" + row['cosmic70']
-					  + "\t" + row['esp6500siv2_all'] + "\t" + row['ExAC_ALL'] + "\t" + row['1000g2015aug_all'] + "\n" 
+				if index >=0:
+					V3.write("2" + "\t" + str(row['Start'][0])+ "\t" + str(row['End'][0])+ "\t" + str(row['Ref'][0])+ "\t" + str(row['Alt'][0])
+					  + "\t" + str(temp_table.loc[index,'Normal_ref']) + "\t" + str(temp_table.loc[index,'Normal_alt']) + "\t" 
+					  + str(temp_table.loc[index,'Normal_ref']) + "\t" + str(temp_table.loc[index,'Normal_alt']) + "\t" +
+					  str(row['Func.refGene'][0]) + "\t" + str(row['Gene.refGene'][0]) + "\t" + str(row['ExonicFunc.refGene'][0]) + "\t" +
+					  str(row['AAChange.refGene'][0]) + "\t" + str(row['SIFT_pred'][0]) + "\t" + str(row['Polyphen2_HVAR_pred'][0]) + "\t" + str(row['cosmic70'][0])
+					  + "\t" + str(row['esp6500siv2_all'][0]) + "\t" + str(row['ExAC_ALL'][0]) + "\t" + str(row['1000g2015aug_all'][0]) + "\n" 
 					   )
 		
